@@ -1,0 +1,543 @@
+----------------------------------------------------------------------------------------------------------------------------------------
+      name:  r5
+       log:  D:\PaperPublish\StataData\ObjectiveMeasure\results/r5/r5_stata_baseline.log
+  log type:  text
+ opened on:   7 Sep 2026, 11:24:22
+
+. 
+. use "`DATA'", clear
+
+. 
+. * ----- Authority / structure checks -----
+. isid project_id month, sort
+(data now sorted by project_id month)
+
+. assert inrange(elig_A,0,1)
+
+. assert inrange(elig_B,0,1)
+
+. assert inrange(elig_C,0,1)
+
+. assert inrange(elig_D,0,1)
+
+. 
+. encode project_id, gen(pid)
+
+. xtset pid month_id
+
+Panel variable: pid (strongly balanced)
+ Time variable: month_id, 648 to 671
+         Delta: 1 unit
+
+. 
+. quietly count
+
+. assert r(N)==21168
+
+. quietly levelsof pid, local(PIDS)
+
+. local NP : word count `PIDS'
+
+. assert `NP'==882
+
+. 
+. * Model-specific minimum-two-month eligibility.
+. bysort pid: egen nA = total(elig_A)
+
+. bysort pid: egen nB = total(elig_B)
+
+. bysort pid: egen nC = total(elig_C)
+
+. bysort pid: egen nD = total(elig_D)
+
+. 
+. gen sample_A = elig_A==1 & nA>=2
+
+. gen sample_B = elig_B==1 & nB>=2
+
+. gen sample_C = elig_C==1 & nC>=2
+
+. gen sample_D = elig_D==1 & nD>=2
+
+. 
+. quietly egen tagA = tag(pid) if sample_A
+
+. quietly count if tagA
+
+. assert r(N)==805
+
+. 
+. quietly egen tagB = tag(pid) if sample_B
+
+. quietly count if tagB
+
+. assert r(N)==805
+
+. 
+. quietly egen tagC = tag(pid) if sample_C
+
+. quietly count if tagC
+
+. assert r(N)==805
+
+. 
+. quietly egen tagD = tag(pid) if sample_D
+
+. quietly count if tagD
+
+. assert r(N)==871
+
+. 
+. * ----- Descriptive diagnostics; no sample redefinition -----
+. summarize ln_resolution ln_open_age asinh_backlog ln_issues_new ln_contributors
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+ln_resolut~n |     13,825    2.119459    1.556855          0   6.608675
+ ln_open_age |     20,852    6.927551    .7783461   1.386294   8.247875
+asinh_back~g |     21,024    5.979092    1.597856          0   10.45155
+ln_issues_~w |     21,072    1.812127    1.541892          0   8.064007
+ln_contrib~s |     21,168    1.177643    1.220025          0    6.44254
+
+. xtsum ln_resolution ln_open_age asinh_backlog ln_issues_new ln_contributors
+
+Variable         |      Mean   Std. dev.       Min        Max |    Observations
+-----------------+--------------------------------------------+----------------
+ln_res~n overall |  2.119459   1.556855          0   6.608675 |     N =   13825
+         between |             1.001072          0   5.876357 |     n =     833
+         within  |             1.249114  -2.312671   7.314003 | T-bar = 16.5966
+                 |                                            |
+ln_ope~e overall |  6.927551   .7783461   1.386294   8.247875 |     N =   20852
+         between |             .7462364   3.905471   8.149734 |     n =     871
+         within  |             .2527858   2.981607   8.281894 | T-bar = 23.9403
+                 |                                            |
+asinh_~g overall |  5.979092   1.597856          0   10.45155 |     N =   21024
+         between |             1.579747          0   10.35837 |     n =     876
+         within  |             .2455041   1.239597   10.00708 |     T =      24
+                 |                                            |
+ln_iss~w overall |  1.812127   1.541892          0   8.064007 |     N =   21072
+         between |             1.423742          0   7.262831 |     n =     878
+         within  |             .5938036  -1.844788   7.946954 |     T =      24
+                 |                                            |
+ln_con~s overall |  1.177643   1.220025          0    6.44254 |     N =   21168
+         between |             1.125464          0    6.28244 |     n =     882
+         within  |             .4724072  -2.120219   4.050841 |     T =      24
+
+. 
+. * ============================================================
+. * MODEL A
+. * ln(open issue age) on ln(closed issue resolution median)
+. * + workload context + participation breadth
+. * project FE + calendar-month FE
+. * SE clustered by project
+. * ============================================================
+. xtreg ln_open_age ln_resolution ln_issues_new ln_contributors i.month_id ///
+>     if sample_A, fe vce(cluster pid)
+
+Fixed-effects (within) regression               Number of obs     =     13,781
+Group variable: pid                             Number of groups  =        805
+
+R-squared:                                      Obs per group:
+     Within  = 0.3626                                         min =          2
+     Between = 0.1155                                         avg =       17.1
+     Overall = 0.1182                                         max =         24
+
+                                                F(26,804)         =      34.98
+corr(u_i, Xb) = 0.1143                          Prob > F          =     0.0000
+
+                                     (Std. err. adjusted for 805 clusters in pid)
+---------------------------------------------------------------------------------
+                |               Robust
+    ln_open_age | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+----------------+----------------------------------------------------------------
+  ln_resolution |  -.0083083   .0021849    -3.80   0.000    -.0125971   -.0040195
+  ln_issues_new |  -.0949591   .0124885    -7.60   0.000     -.119473   -.0704452
+ln_contributors |  -.0108473   .0076589    -1.42   0.157    -.0258811    .0041864
+                |
+       month_id |
+           649  |   .0145576   .0072978     1.99   0.046     .0002325    .0288826
+           650  |   .0394892   .0117304     3.37   0.001     .0164634    .0625149
+           651  |   .0578531   .0121887     4.75   0.000     .0339276    .0817787
+           652  |   .0806008   .0111543     7.23   0.000     .0587058    .1024957
+           653  |   .1022084     .01195     8.55   0.000     .0787515    .1256654
+           654  |   .1144024   .0131133     8.72   0.000      .088662    .1401427
+           655  |   .1343234   .0131267    10.23   0.000     .1085567      .16009
+           656  |   .1588844   .0146003    10.88   0.000     .1302252    .1875437
+           657  |   .1780984   .0165276    10.78   0.000     .1456561    .2105407
+           658  |   .1979264   .0147752    13.40   0.000     .1689239    .2269289
+           659  |   .2192955   .0155943    14.06   0.000     .1886852    .2499058
+           660  |   .2514878    .015842    15.87   0.000     .2203912    .2825843
+           661  |   .2716676   .0155628    17.46   0.000      .241119    .3022161
+           662  |    .294448   .0161891    18.19   0.000     .2626701     .326226
+           663  |   .3036659   .0161936    18.75   0.000     .2718792    .3354525
+           664  |   .3155793   .0179911    17.54   0.000     .2802642    .3508945
+           665  |   .3086671   .0191815    16.09   0.000     .2710155    .3463187
+           666  |   .3277633   .0185877    17.63   0.000     .2912772    .3642494
+           667  |   .3481887   .0197571    17.62   0.000     .3094071    .3869703
+           668  |   .3586637   .0208171    17.23   0.000     .3178013    .3995261
+           669  |    .352018   .0228547    15.40   0.000     .3071561    .3968799
+           670  |    .371318   .0232981    15.94   0.000     .3255858    .4170502
+           671  |   .3865495   .0232226    16.65   0.000     .3409655    .4321336
+                |
+          _cons |   6.854412    .040492   169.28   0.000      6.77493    6.933895
+----------------+----------------------------------------------------------------
+        sigma_u |  .74815784
+        sigma_e |  .20481842
+            rho |  .93027882   (fraction of variance due to u_i)
+---------------------------------------------------------------------------------
+
+. estimates store R5_A
+
+. 
+. scalar A_N       = e(N)
+
+. scalar A_Ng      = e(N_g)
+
+. scalar A_r2w     = e(r2_w)
+
+. scalar A_b_res   = _b[ln_resolution]
+
+. scalar A_se_res  = _se[ln_resolution]
+
+. scalar A_b_issue = _b[ln_issues_new]
+
+. scalar A_se_issue= _se[ln_issues_new]
+
+. scalar A_b_contr = _b[ln_contributors]
+
+. scalar A_se_contr= _se[ln_contributors]
+
+. 
+. assert A_N==13781
+
+. assert A_Ng==805
+
+. 
+. * ============================================================
+. * MODEL B
+. * unresolved backlog burden on closed-item resolution median
+. * ============================================================
+. xtreg asinh_backlog ln_resolution ln_issues_new ln_contributors i.month_id ///
+>     if sample_B, fe vce(cluster pid)
+
+Fixed-effects (within) regression               Number of obs     =     13,797
+Group variable: pid                             Number of groups  =        805
+
+R-squared:                                      Obs per group:
+     Within  = 0.1291                                         min =          2
+     Between = 0.4739                                         avg =       17.1
+     Overall = 0.3813                                         max =         24
+
+                                                F(26,804)         =       8.06
+corr(u_i, Xb) = 0.5462                          Prob > F          =     0.0000
+
+                                     (Std. err. adjusted for 805 clusters in pid)
+---------------------------------------------------------------------------------
+                |               Robust
+  asinh_backlog | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+----------------+----------------------------------------------------------------
+  ln_resolution |   .0125608   .0053511     2.35   0.019     .0020571    .0230646
+  ln_issues_new |    .121414   .0631878     1.92   0.055    -.0026185    .2454466
+ln_contributors |  -.0315552   .0242359    -1.30   0.193    -.0791283    .0160179
+                |
+       month_id |
+           649  |    .017604   .0090415     1.95   0.052    -.0001438    .0353517
+           650  |   .0307468   .0089149     3.45   0.001     .0132475     .048246
+           651  |   .0421782   .0112029     3.76   0.000     .0201878    .0641685
+           652  |   .0684567   .0099295     6.89   0.000      .048966    .0879475
+           653  |   .0749266   .0117763     6.36   0.000     .0518106    .0980426
+           654  |   .0887904   .0121572     7.30   0.000     .0649268     .112654
+           655  |    .102089   .0121635     8.39   0.000     .0782131    .1259649
+           656  |    .113778   .0123082     9.24   0.000      .089618     .137938
+           657  |   .1279938   .0136515     9.38   0.000      .101197    .1547906
+           658  |   .1421531    .013546    10.49   0.000     .1155634    .1687428
+           659  |   .1649035    .021429     7.70   0.000       .12284    .2069669
+           660  |   .1799492   .0218326     8.24   0.000     .1370935     .222805
+           661  |   .1894202   .0226225     8.37   0.000     .1450142    .2338263
+           662  |   .1925574    .020586     9.35   0.000     .1521489     .232966
+           663  |   .2108874   .0250687     8.41   0.000     .1616795    .2600952
+           664  |   .2374356   .0320848     7.40   0.000     .1744558    .3004154
+           665  |   .2692906   .0426218     6.32   0.000     .1856275    .3529538
+           666  |   .2768107   .0412085     6.72   0.000     .1959216    .3576997
+           667  |   .2945641   .0454134     6.49   0.000     .2054212     .383707
+           668  |   .3181833    .050915     6.25   0.000     .2182413    .4181254
+           669  |   .3466367   .0610918     5.67   0.000     .2267183     .466555
+           670  |    .353887   .0552785     6.40   0.000     .2453797    .4623943
+           671  |   .3689075   .0594309     6.21   0.000     .2522495    .4855655
+                |
+          _cons |   5.985854   .1361262    43.97   0.000     5.718649    6.253059
+----------------+----------------------------------------------------------------
+        sigma_u |  1.3715906
+        sigma_e |   .2455677
+            rho |  .96894077   (fraction of variance due to u_i)
+---------------------------------------------------------------------------------
+
+. estimates store R5_B
+
+. 
+. scalar B_N       = e(N)
+
+. scalar B_Ng      = e(N_g)
+
+. scalar B_r2w     = e(r2_w)
+
+. scalar B_b_res   = _b[ln_resolution]
+
+. scalar B_se_res  = _se[ln_resolution]
+
+. scalar B_b_issue = _b[ln_issues_new]
+
+. scalar B_se_issue= _se[ln_issues_new]
+
+. scalar B_b_contr = _b[ln_contributors]
+
+. scalar B_se_contr= _se[ln_contributors]
+
+. 
+. assert B_N==13797
+
+. assert B_Ng==805
+
+. 
+. * ============================================================
+. * MODEL C
+. * context sensitivity of closed-item resolution median
+. * ============================================================
+. xtreg ln_resolution ln_issues_new ln_contributors i.month_id ///
+>     if sample_C, fe vce(cluster pid)
+
+Fixed-effects (within) regression               Number of obs     =     13,797
+Group variable: pid                             Number of groups  =        805
+
+R-squared:                                      Obs per group:
+     Within  = 0.0565                                         min =          2
+     Between = 0.0048                                         avg =       17.1
+     Overall = 0.0124                                         max =         24
+
+                                                F(25,804)         =      13.96
+corr(u_i, Xb) = -0.4574                         Prob > F          =     0.0000
+
+                                     (Std. err. adjusted for 805 clusters in pid)
+---------------------------------------------------------------------------------
+                |               Robust
+  ln_resolution | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+----------------+----------------------------------------------------------------
+  ln_issues_new |  -.2474054   .0378734    -6.53   0.000    -.3217477    -.173063
+ln_contributors |  -.2649374   .0331134    -8.00   0.000    -.3299362   -.1999385
+                |
+       month_id |
+           649  |  -.0689347    .067587    -1.02   0.308    -.2016024     .063733
+           650  |    .007688   .0688186     0.11   0.911    -.1273974    .1427733
+           651  |   .0381287   .0700978     0.54   0.587    -.0994677     .175725
+           652  |  -.0210932   .0706747    -0.30   0.765     -.159822    .1176355
+           653  |  -.1220643   .0673083    -1.81   0.070     -.254185    .0100564
+           654  |  -.1537852   .0658707    -2.33   0.020    -.2830841   -.0244863
+           655  |  -.2181659   .0690275    -3.16   0.002    -.3536613   -.0826705
+           656  |  -.2773761   .0717298    -3.87   0.000    -.4181759   -.1365764
+           657  |  -.3374685    .071978    -4.69   0.000    -.4787554   -.1961815
+           658  |  -.3068484   .0730681    -4.20   0.000    -.4502752   -.1634215
+           659  |  -.2825422   .0734561    -3.85   0.000    -.4267305   -.1383539
+           660  |  -.4526598   .0729748    -6.20   0.000    -.5959034   -.3094161
+           661  |  -.6049354   .0729158    -8.30   0.000    -.7480632   -.4618076
+           662  |  -.5816215   .0753323    -7.72   0.000    -.7294927   -.4337504
+           663  |  -.5833992    .078141    -7.47   0.000    -.7367837   -.4300147
+           664  |  -.6398107   .0785792    -8.14   0.000    -.7940554   -.4855661
+           665  |  -.5937974   .0820173    -7.24   0.000    -.7547908    -.432804
+           666  |  -.6769031    .085576    -7.91   0.000    -.8448818   -.5089244
+           667  |  -.7882789    .083125    -9.48   0.000    -.9514465   -.6251114
+           668  |  -.8971385   .0829272   -10.82   0.000    -1.059918   -.7343591
+           669  |  -.8029846   .0897173    -8.95   0.000    -.9790924   -.6268767
+           670  |  -1.100993   .0920317   -11.96   0.000    -1.281644   -.9203421
+           671  |  -1.094823    .092761   -11.80   0.000    -1.276906   -.9127408
+                |
+          _cons |   3.575878   .1239783    28.84   0.000     3.332519    3.819238
+----------------+----------------------------------------------------------------
+        sigma_u |  1.0920007
+        sigma_e |  1.2527899
+            rho |  .43174799   (fraction of variance due to u_i)
+---------------------------------------------------------------------------------
+
+. estimates store R5_C
+
+. 
+. scalar C_N       = e(N)
+
+. scalar C_Ng      = e(N_g)
+
+. scalar C_r2w     = e(r2_w)
+
+. scalar C_b_issue = _b[ln_issues_new]
+
+. scalar C_se_issue= _se[ln_issues_new]
+
+. scalar C_b_contr = _b[ln_contributors]
+
+. scalar C_se_contr= _se[ln_contributors]
+
+. 
+. assert C_N==13797
+
+. assert C_Ng==805
+
+. 
+. * ============================================================
+. * MODEL D
+. * context sensitivity of unresolved backlog age
+. * ============================================================
+. xtreg ln_open_age ln_issues_new ln_contributors i.month_id ///
+>     if sample_D, fe vce(cluster pid)
+
+Fixed-effects (within) regression               Number of obs     =     20,852
+Group variable: pid                             Number of groups  =        871
+
+R-squared:                                      Obs per group:
+     Within  = 0.3799                                         min =          6
+     Between = 0.1311                                         avg =       23.9
+     Overall = 0.1436                                         max =         24
+
+                                                F(25,870)         =      51.81
+corr(u_i, Xb) = 0.1354                          Prob > F          =     0.0000
+
+                                     (Std. err. adjusted for 871 clusters in pid)
+---------------------------------------------------------------------------------
+                |               Robust
+    ln_open_age | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+----------------+----------------------------------------------------------------
+  ln_issues_new |  -.0760119    .008319    -9.14   0.000    -.0923396   -.0596842
+ln_contributors |  -.0196331   .0067769    -2.90   0.004    -.0329341    -.006332
+                |
+       month_id |
+           649  |   .0183396   .0057681     3.18   0.002     .0070185    .0296607
+           650  |    .037755   .0094952     3.98   0.000     .0191189    .0563912
+           651  |   .0603531   .0095345     6.33   0.000     .0416398    .0790664
+           652  |   .0806747   .0091767     8.79   0.000     .0626636    .0986858
+           653  |   .1022974   .0099561    10.27   0.000     .0827567    .1218382
+           654  |   .1164263   .0112442    10.35   0.000     .0943573    .1384952
+           655  |   .1405869   .0110059    12.77   0.000     .1189857    .1621882
+           656  |   .1589696   .0123801    12.84   0.000     .1346712     .183268
+           657  |   .1823023   .0134142    13.59   0.000     .1559744    .2086301
+           658  |   .2029642   .0123559    16.43   0.000     .1787135     .227215
+           659  |   .2215663   .0130977    16.92   0.000     .1958596    .2472731
+           660  |   .2502627   .0129159    19.38   0.000     .2249128    .2756127
+           661  |   .2718788   .0127999    21.24   0.000     .2467566     .297001
+           662  |   .2922775   .0131888    22.16   0.000     .2663919    .3181631
+           663  |   .3069159    .013228    23.20   0.000     .2809534    .3328783
+           664  |   .3164708   .0138253    22.89   0.000      .289336    .3436055
+           665  |   .3225648   .0145352    22.19   0.000     .2940367    .3510929
+           666  |   .3437435   .0145932    23.56   0.000     .3151016    .3723854
+           667  |   .3569304   .0162985    21.90   0.000     .3249415    .3889193
+           668  |   .3724477    .016212    22.97   0.000     .3406285    .4042668
+           669  |   .3766104    .017183    21.92   0.000     .3428854    .4103353
+           670  |    .395423   .0172647    22.90   0.000     .3615377    .4293084
+           671  |    .411511   .0175806    23.41   0.000     .3770057    .4460163
+                |
+          _cons |   6.867062   .0234219   293.19   0.000     6.821092    6.913032
+----------------+----------------------------------------------------------------
+        sigma_u |  .71037365
+        sigma_e |   .2034687
+            rho |  .92418092   (fraction of variance due to u_i)
+---------------------------------------------------------------------------------
+
+. estimates store R5_D
+
+. 
+. scalar D_N       = e(N)
+
+. scalar D_Ng      = e(N_g)
+
+. scalar D_r2w     = e(r2_w)
+
+. scalar D_b_issue = _b[ln_issues_new]
+
+. scalar D_se_issue= _se[ln_issues_new]
+
+. scalar D_b_contr = _b[ln_contributors]
+
+. scalar D_se_contr= _se[ln_contributors]
+
+. 
+. assert D_N==20852
+
+. assert D_Ng==871
+
+. 
+. * ----- Machine-readable baseline summary -----
+. tempname fh
+
+. file open `fh' using "`OUT'/r5_stata_baseline_summary.csv", write text replace
+(file results/r5/r5_stata_baseline_summary.csv not found)
+
+. file write `fh' "model,N,projects,r2_within,term,b,se" _n
+
+. 
+. file write `fh' "A," %12.0f (A_N) "," %12.0f (A_Ng) "," %12.8f (A_r2w) ",ln_resolution," %18.10f (A_b_res) "," %18.10f (A_se_res) _n
+
+. file write `fh' "A," %12.0f (A_N) "," %12.0f (A_Ng) "," %12.8f (A_r2w) ",ln_issues_new," %18.10f (A_b_issue) "," %18.10f (A_se_issue) 
+> _n
+
+. file write `fh' "A," %12.0f (A_N) "," %12.0f (A_Ng) "," %12.8f (A_r2w) ",ln_contributors," %18.10f (A_b_contr) "," %18.10f (A_se_contr
+> ) _n
+
+. 
+. file write `fh' "B," %12.0f (B_N) "," %12.0f (B_Ng) "," %12.8f (B_r2w) ",ln_resolution," %18.10f (B_b_res) "," %18.10f (B_se_res) _n
+
+. file write `fh' "B," %12.0f (B_N) "," %12.0f (B_Ng) "," %12.8f (B_r2w) ",ln_issues_new," %18.10f (B_b_issue) "," %18.10f (B_se_issue) 
+> _n
+
+. file write `fh' "B," %12.0f (B_N) "," %12.0f (B_Ng) "," %12.8f (B_r2w) ",ln_contributors," %18.10f (B_b_contr) "," %18.10f (B_se_contr
+> ) _n
+
+. 
+. file write `fh' "C," %12.0f (C_N) "," %12.0f (C_Ng) "," %12.8f (C_r2w) ",ln_issues_new," %18.10f (C_b_issue) "," %18.10f (C_se_issue) 
+> _n
+
+. file write `fh' "C," %12.0f (C_N) "," %12.0f (C_Ng) "," %12.8f (C_r2w) ",ln_contributors," %18.10f (C_b_contr) "," %18.10f (C_se_contr
+> ) _n
+
+. 
+. file write `fh' "D," %12.0f (D_N) "," %12.0f (D_Ng) "," %12.8f (D_r2w) ",ln_issues_new," %18.10f (D_b_issue) "," %18.10f (D_se_issue) 
+> _n
+
+. file write `fh' "D," %12.0f (D_N) "," %12.0f (D_Ng) "," %12.8f (D_r2w) ",ln_contributors," %18.10f (D_b_contr) "," %18.10f (D_se_contr
+> ) _n
+
+. 
+. file close `fh'
+
+. 
+. * Preserve estimates.
+. estimates restore R5_A
+(results R5_A are active now)
+
+. estimates save "`OUT'/r5_A.ster", replace
+(note: file results/r5/r5_A.ster not found)
+file results/r5/r5_A.ster saved
+
+. estimates restore R5_B
+(results R5_B are active now)
+
+. estimates save "`OUT'/r5_B.ster", replace
+(note: file results/r5/r5_B.ster not found)
+file results/r5/r5_B.ster saved
+
+. estimates restore R5_C
+(results R5_C are active now)
+
+. estimates save "`OUT'/r5_C.ster", replace
+(note: file results/r5/r5_C.ster not found)
+file results/r5/r5_C.ster saved
+
+. estimates restore R5_D
+(results R5_D are active now)
+
+. estimates save "`OUT'/r5_D.ster", replace
+(note: file results/r5/r5_D.ster not found)
+file results/r5/r5_D.ster saved
+
+. 
+. log close r5
+      name:  r5
+       log:  D:\PaperPublish\StataData\ObjectiveMeasure\results/r5/r5_stata_baseline.log
+  log type:  text
+ closed on:   7 Sep 2026, 11:24:25
+----------------------------------------------------------------------------------------------------------------------------------------
