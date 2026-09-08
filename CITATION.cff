@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this replication package, please cite the associated manuscript and this repository."
+title: "Replication package for: What Does Closed-Issue Resolution Time Measure? Evidence from Open-Source Software Projects"
+type: software
+authors:
+  - family-names: "Gu"
+    given-names: "Xiaopeng"
+    affiliation: "Al-Farabi Kazakh National University, Almaty, Republic of Kazakhstan"
+    orcid: "https://orcid.org/0009-0004-5735-0535"
+  - family-names: "Ma"
+    given-names: "Meizi"
+    affiliation: "Qilu Medical University, Zibo, Shandong, China"
+  - family-names: "Gao"
+    given-names: "Yang"
+    affiliation: "Al-Farabi Kazakh National University, Almaty, Republic of Kazakhstan"
+  - family-names: "Abinova"
+    given-names: "Alfiya Yuryevna"
+    affiliation: "Al-Farabi Kazakh National University, Almaty, Republic of Kazakhstan"
+repository-code: "https://github.com/PonderGit/OMOSSP-EMSE-Replication"
+keywords:
+  - "software measurement"
+  - "construct validity"
+  - "digital traces"
+  - "mining software repositories"
+  - "GitHub"
+  - "issue-response timeliness"
