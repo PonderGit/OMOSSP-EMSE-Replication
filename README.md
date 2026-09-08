@@ -161,7 +161,7 @@ R5-C selected the **MIT License for verified first-party author-written code onl
 
 The MIT license does **not** apply to OpenDigger data, other third-party data/code, public repository identifiers as third-party facts, or materials whose rights are not owned by the authors.
 
-The formal `LICENSE` file is pending only the verified copyright-holder line. This does not change the frozen MIT policy or the third-party-data boundary.
+The repository includes a formal MIT `LICENSE` for verified first-party author-written code only. Copyright is held by Gu Xiaopeng. This license does not apply to OpenDigger data or other third-party materials.
 
 ## Acknowledgements
 
