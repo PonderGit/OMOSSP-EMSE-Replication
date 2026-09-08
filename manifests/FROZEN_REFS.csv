@@ -1,0 +1,12 @@
+component,repository_or_source,ref_type,ref,notes
+R3_formal_project_frame,PonderGit/CodexTest,commit,434aa95eeb23bda891077b58b5e9030ba40594b3,882-project formal frame freeze
+R5_formal_results,PonderGit/CodexTest,commit,a296587e3868416119e3a86f59b849960a17e8c4,Frozen Python primary result commit
+R6_design_lock,PonderGit/CodexTest,commit,a9022a9abf6fc754fc776a01f69b41aff4bf1423,Prospective robustness design lock
+R6A_implementation_freeze,PonderGit/CodexTest,commit,513769d52eadd6fdcb1012bf9449da5d92bce761,Pre-result R6A implementation freeze
+R6A_closeout,PonderGit/CodexTest,commit,ed44441966272699095fe929d7f75ec290ed88b8,36-month feasibility closeout
+R6_formal_results,PonderGit/CodexTest,commit,2b0bb0107c9df03395812c2eed121be57ef6a160,Frozen Python robustness result commit
+OpenDigger_semantic_lock,X-lab2017/open-digger,commit,63e4b89ecd525221be95fe2a48a714ebb3c722ec,Upstream metric-semantic source lock
+OpenDigger_chaoss_ts,X-lab2017/open-digger,blob,b7a9293434a081d713406eac5f7fc889d35de97f,src/metrics/chaoss.ts
+OpenDigger_basic_ts,X-lab2017/open-digger,blob,741591d9916ae068c0c5b46d6fe7e24b025a43bc,src/metrics/basic.ts
+R5F_25_file_head,PonderGit/OMOSSP-EMSE-Replication,commit,17067ac51700552cf10bf37ef304d6241f4126c1,Initial R5-F exact-tree closeout before dependency addendum
+R5F_runtime_complete_head,PonderGit/OMOSSP-EMSE-Replication,commit,dd7be1967d4ec8b77230561c2aba37164cc04d85,Runtime dependency-complete tree before R5-G documentation
