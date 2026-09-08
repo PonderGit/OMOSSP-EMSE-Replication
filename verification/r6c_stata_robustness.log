@@ -1,0 +1,350 @@
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  r6c
+       log:  D:\PaperPublish\StataData\ObjectiveMeasure\results/r6c/r6c_stata_robustness.log
+  log type:  text
+ opened on:   7 Sep 2026, 13:05:00
+
+. 
+. file open r6cfh using "`OUT'/r6c_stata_robustness_high_precision.csv", write text replace
+(file results/r6c/r6c_stata_robustness_high_precision.csv not found)
+
+. file write r6cfh "spec_id,family,model,N,projects,term,b,se,p" _n
+
+. 
+. capture program drop omossp_r6c_run
+
+. program define omossp_r6c_run
+  1.     syntax, SPEC(string) FAMILY(string) MODEL(string) Y(varname) X(varlist) SAMPLE(varname) EXPN(integer) EXPG(integer)
+  2. 
+.     quietly xtreg `y' `x' i.month_id if `sample'==1, fe vce(cluster pid)
+  3. 
+.     if (e(N) != `expn') {
+  4.         display as error "R6C_N_ASSERT_FAIL spec=`spec' observed=" e(N) " expected=`expn'"
+  5.         exit 459
+  6.     }
+  7.     if (e(N_g) != `expg') {
+  8.         display as error "R6C_PROJECT_ASSERT_FAIL spec=`spec' observed=" e(N_g) " expected=`expg'"
+  9.         exit 459
+ 10.     }
+ 11. 
+.     estimates store E_`spec'
+ 12.     estimates save "$R6C_OUT/r6c_`spec'.ster", replace
+ 13. 
+.     foreach term of local x {
+ 14.         scalar __b  = _b[`term']
+ 15.         scalar __se = _se[`term']
+ 16.         scalar __p  = 2*ttail(e(df_r), abs(__b/__se))
+ 17.         file write r6cfh "`spec',`family',`model'," %12.0f (e(N)) "," %12.0f (e(N_g)) ",`term'," %24.17g (__b) "," %24.17g (__se) "," %24.17g (__p) _n
+ 18.     }
+ 19. end
+
+. 
+. global R6C_OUT "`OUT'"
+
+. 
+. * ============================================================
+. * PART I — 24-MONTH ROBUSTNESS: 2024-01..2025-12
+. * ============================================================
+. 
+. use "`DATA24'", clear
+
+. 
+. isid project_id month, sort
+(data now sorted by project_id month)
+
+. quietly count
+
+. assert r(N)==21168
+
+. 
+. encode project_id, gen(pid)
+
+. quietly egen tagP24 = tag(pid)
+
+. quietly count if tagP24
+
+. assert r(N)==882
+
+. drop tagP24
+
+. xtset pid month_id
+
+Panel variable: pid (strongly balanced)
+ Time variable: month_id, 648 to 671
+         Delta: 1 unit
+
+. 
+. assert inrange(elig_A,0,1)
+
+. assert inrange(elig_B,0,1)
+
+. assert inrange(elig_C,0,1)
+
+. assert inrange(elig_D,0,1)
+
+. 
+. bysort pid: egen nA = total(elig_A)
+
+. bysort pid: egen nB = total(elig_B)
+
+. bysort pid: egen nC = total(elig_C)
+
+. bysort pid: egen nD = total(elig_D)
+
+. 
+. gen s_A2  = elig_A==1 & nA>=2
+
+. gen s_B2  = elig_B==1 & nB>=2
+
+. gen s_C2  = elig_C==1 & nC>=2
+
+. gen s_D2  = elig_D==1 & nD>=2
+
+. 
+. gen s_A6  = elig_A==1 & nA>=6
+
+. gen s_B6  = elig_B==1 & nB>=6
+
+. gen s_C6  = elig_C==1 & nC>=6
+
+. gen s_D6  = elig_D==1 & nD>=6
+
+. 
+. gen s_A12 = elig_A==1 & nA>=12
+
+. gen s_B12 = elig_B==1 & nB>=12
+
+. gen s_C12 = elig_C==1 & nC>=12
+
+. gen s_D12 = elig_D==1 & nD>=12
+
+. 
+. * Frozen common-support rule.
+. gen common_complete = !missing(ln_resolution, ln_open_age, asinh_backlog, ln_issues_new, ln_contributors)
+
+. bysort pid: egen nCOMMON = total(common_complete)
+
+. gen s_COMMON = common_complete==1 & nCOMMON>=2
+
+. 
+. quietly count if s_COMMON
+
+. assert r(N)==13781
+
+. quietly egen tagCOMMON = tag(pid) if s_COMMON
+
+. quietly count if tagCOMMON
+
+. assert r(N)==805
+
+. 
+. * Secondary measurement-observability diagnostic.
+. gen md_complete = !missing(ln_issues_new, ln_contributors)
+
+. bysort pid: egen nMD = total(md_complete)
+
+. gen s_MD = md_complete==1 & nMD>=2
+
+. gen resolution_observed = !missing(ln_resolution)
+
+. 
+. quietly count if s_MD
+
+. assert r(N)==21072
+
+. quietly egen tagMD = tag(pid) if s_MD
+
+. quietly count if tagMD
+
+. assert r(N)==878
+
+. assert !missing(asinh_net_code_lines) if s_MD
+
+. 
+. * ----- R6.1 Minimum usable-month robustness -----
+. omossp_r6c_run, spec(R6_1_A_GE6)  family(R6_1_MIN_USABLE_MONTHS) model(A) y(ln_open_age)     x(ln_resolution ln_issues_new ln_contributors) sample(s_A6)  expn(13451) expg
+> (717)
+(note: file results/r6c/r6c_R6_1_A_GE6.ster not found)
+file results/r6c/r6c_R6_1_A_GE6.ster saved
+
+. omossp_r6c_run, spec(R6_1_A_GE12) family(R6_1_MIN_USABLE_MONTHS) model(A) y(ln_open_age)     x(ln_resolution ln_issues_new ln_contributors) sample(s_A12) expn(12444) expg
+> (600)
+(note: file results/r6c/r6c_R6_1_A_GE12.ster not found)
+file results/r6c/r6c_R6_1_A_GE12.ster saved
+
+. 
+. omossp_r6c_run, spec(R6_1_B_GE6)  family(R6_1_MIN_USABLE_MONTHS) model(B) y(asinh_backlog)   x(ln_resolution ln_issues_new ln_contributors) sample(s_B6)  expn(13471) expg
+> (718)
+(note: file results/r6c/r6c_R6_1_B_GE6.ster not found)
+file results/r6c/r6c_R6_1_B_GE6.ster saved
+
+. omossp_r6c_run, spec(R6_1_B_GE12) family(R6_1_MIN_USABLE_MONTHS) model(B) y(asinh_backlog)   x(ln_resolution ln_issues_new ln_contributors) sample(s_B12) expn(12465) expg
+> (601)
+(note: file results/r6c/r6c_R6_1_B_GE12.ster not found)
+file results/r6c/r6c_R6_1_B_GE12.ster saved
+
+. 
+. omossp_r6c_run, spec(R6_1_C_GE6)  family(R6_1_MIN_USABLE_MONTHS) model(C) y(ln_resolution)   x(ln_issues_new ln_contributors) sample(s_C6)  expn(13471) expg(718)
+(note: file results/r6c/r6c_R6_1_C_GE6.ster not found)
+file results/r6c/r6c_R6_1_C_GE6.ster saved
+
+. omossp_r6c_run, spec(R6_1_C_GE12) family(R6_1_MIN_USABLE_MONTHS) model(C) y(ln_resolution)   x(ln_issues_new ln_contributors) sample(s_C12) expn(12465) expg(601)
+(note: file results/r6c/r6c_R6_1_C_GE12.ster not found)
+file results/r6c/r6c_R6_1_C_GE12.ster saved
+
+. 
+. omossp_r6c_run, spec(R6_1_D_GE6)  family(R6_1_MIN_USABLE_MONTHS) model(D) y(ln_open_age)     x(ln_issues_new ln_contributors) sample(s_D6)  expn(20852) expg(871)
+(note: file results/r6c/r6c_R6_1_D_GE6.ster not found)
+file results/r6c/r6c_R6_1_D_GE6.ster saved
+
+. omossp_r6c_run, spec(R6_1_D_GE12) family(R6_1_MIN_USABLE_MONTHS) model(D) y(ln_open_age)     x(ln_issues_new ln_contributors) sample(s_D12) expn(20846) expg(870)
+(note: file results/r6c/r6c_R6_1_D_GE12.ster not found)
+file results/r6c/r6c_R6_1_D_GE12.ster saved
+
+. 
+. * ----- R6.2 Common-support robustness -----
+. omossp_r6c_run, spec(R6_2_A_COMMON) family(R6_2_COMMON_SUPPORT) model(A) y(ln_open_age)     x(ln_resolution ln_issues_new ln_contributors) sample(s_COMMON) expn(13781) ex
+> pg(805)
+(note: file results/r6c/r6c_R6_2_A_COMMON.ster not found)
+file results/r6c/r6c_R6_2_A_COMMON.ster saved
+
+. omossp_r6c_run, spec(R6_2_B_COMMON) family(R6_2_COMMON_SUPPORT) model(B) y(asinh_backlog)   x(ln_resolution ln_issues_new ln_contributors) sample(s_COMMON) expn(13781) ex
+> pg(805)
+(note: file results/r6c/r6c_R6_2_B_COMMON.ster not found)
+file results/r6c/r6c_R6_2_B_COMMON.ster saved
+
+. omossp_r6c_run, spec(R6_2_C_COMMON) family(R6_2_COMMON_SUPPORT) model(C) y(ln_resolution)   x(ln_issues_new ln_contributors) sample(s_COMMON) expn(13781) expg(805)
+(note: file results/r6c/r6c_R6_2_C_COMMON.ster not found)
+file results/r6c/r6c_R6_2_C_COMMON.ster saved
+
+. omossp_r6c_run, spec(R6_2_D_COMMON) family(R6_2_COMMON_SUPPORT) model(D) y(ln_open_age)     x(ln_issues_new ln_contributors) sample(s_COMMON) expn(13781) expg(805)
+(note: file results/r6c/r6c_R6_2_D_COMMON.ster not found)
+file results/r6c/r6c_R6_2_D_COMMON.ster saved
+
+. 
+. * ----- R6.3 Auxiliary signed net-code context -----
+. assert !missing(asinh_net_code_lines) if s_A2
+
+. assert !missing(asinh_net_code_lines) if s_B2
+
+. assert !missing(asinh_net_code_lines) if s_C2
+
+. assert !missing(asinh_net_code_lines) if s_D2
+
+. 
+. omossp_r6c_run, spec(R6_3_A_AUX_NET_CODE) family(R6_3_AUX_SIGNED_CHANGE_CONTEXT) model(A) y(ln_open_age)   x(ln_resolution ln_issues_new ln_contributors asinh_net_code_li
+> nes) sample(s_A2) expn(13781) expg(805)
+(note: file results/r6c/r6c_R6_3_A_AUX_NET_CODE.ster not found)
+file results/r6c/r6c_R6_3_A_AUX_NET_CODE.ster saved
+
+. omossp_r6c_run, spec(R6_3_B_AUX_NET_CODE) family(R6_3_AUX_SIGNED_CHANGE_CONTEXT) model(B) y(asinh_backlog) x(ln_resolution ln_issues_new ln_contributors asinh_net_code_li
+> nes) sample(s_B2) expn(13797) expg(805)
+(note: file results/r6c/r6c_R6_3_B_AUX_NET_CODE.ster not found)
+file results/r6c/r6c_R6_3_B_AUX_NET_CODE.ster saved
+
+. omossp_r6c_run, spec(R6_3_C_AUX_NET_CODE) family(R6_3_AUX_SIGNED_CHANGE_CONTEXT) model(C) y(ln_resolution) x(ln_issues_new ln_contributors asinh_net_code_lines) sample(s_
+> C2) expn(13797) expg(805)
+(note: file results/r6c/r6c_R6_3_C_AUX_NET_CODE.ster not found)
+file results/r6c/r6c_R6_3_C_AUX_NET_CODE.ster saved
+
+. omossp_r6c_run, spec(R6_3_D_AUX_NET_CODE) family(R6_3_AUX_SIGNED_CHANGE_CONTEXT) model(D) y(ln_open_age)   x(ln_issues_new ln_contributors asinh_net_code_lines) sample(s_
+> D2) expn(20852) expg(871)
+(note: file results/r6c/r6c_R6_3_D_AUX_NET_CODE.ster not found)
+file results/r6c/r6c_R6_3_D_AUX_NET_CODE.ster saved
+
+. 
+. * ----- R6-MD1 Measurement observability -----
+. omossp_r6c_run, spec(R6_MD1_BASE) family(R6_MD1) model(MD1) y(resolution_observed) x(ln_issues_new ln_contributors) sample(s_MD) expn(21072) expg(878)
+(note: file results/r6c/r6c_R6_MD1_BASE.ster not found)
+file results/r6c/r6c_R6_MD1_BASE.ster saved
+
+. omossp_r6c_run, spec(R6_MD1_AUX_NET_CODE) family(R6_MD1) model(MD1) y(resolution_observed) x(ln_issues_new ln_contributors asinh_net_code_lines) sample(s_MD) expn(21072) 
+> expg(878)
+(note: file results/r6c/r6c_R6_MD1_AUX_NET_CODE.ster not found)
+file results/r6c/r6c_R6_MD1_AUX_NET_CODE.ster saved
+
+. 
+. * ============================================================
+. * PART II — 36-MONTH TEMPORAL ROBUSTNESS: 2023-01..2025-12
+. * ============================================================
+. 
+. use "`DATA36'", clear
+
+. 
+. isid project_id month, sort
+(data now sorted by project_id month)
+
+. quietly count
+
+. assert r(N)==30384
+
+. 
+. encode project_id, gen(pid)
+
+. quietly egen tagP36 = tag(pid)
+
+. quietly count if tagP36
+
+. assert r(N)==844
+
+. drop tagP36
+
+. xtset pid month_id
+
+Panel variable: pid (strongly balanced)
+ Time variable: month_id, 636 to 671
+         Delta: 1 unit
+
+. 
+. assert inrange(elig_A,0,1)
+
+. assert inrange(elig_B,0,1)
+
+. assert inrange(elig_C,0,1)
+
+. assert inrange(elig_D,0,1)
+
+. 
+. bysort pid: egen nA36 = total(elig_A)
+
+. bysort pid: egen nB36 = total(elig_B)
+
+. bysort pid: egen nC36 = total(elig_C)
+
+. bysort pid: egen nD36 = total(elig_D)
+
+. 
+. gen s_A36 = elig_A==1 & nA36>=2
+
+. gen s_B36 = elig_B==1 & nB36>=2
+
+. gen s_C36 = elig_C==1 & nC36>=2
+
+. gen s_D36 = elig_D==1 & nD36>=2
+
+. 
+. omossp_r6c_run, spec(R6_4_A_36M) family(R6_4_36M_WINDOW) model(A) y(ln_open_age)   x(ln_resolution ln_issues_new ln_contributors) sample(s_A36) expn(21020) expg(800)
+(note: file results/r6c/r6c_R6_4_A_36M.ster not found)
+file results/r6c/r6c_R6_4_A_36M.ster saved
+
+. omossp_r6c_run, spec(R6_4_B_36M) family(R6_4_36M_WINDOW) model(B) y(asinh_backlog) x(ln_resolution ln_issues_new ln_contributors) sample(s_B36) expn(21045) expg(800)
+(note: file results/r6c/r6c_R6_4_B_36M.ster not found)
+file results/r6c/r6c_R6_4_B_36M.ster saved
+
+. omossp_r6c_run, spec(R6_4_C_36M) family(R6_4_36M_WINDOW) model(C) y(ln_resolution) x(ln_issues_new ln_contributors) sample(s_C36) expn(21045) expg(800)
+(note: file results/r6c/r6c_R6_4_C_36M.ster not found)
+file results/r6c/r6c_R6_4_C_36M.ster saved
+
+. omossp_r6c_run, spec(R6_4_D_36M) family(R6_4_36M_WINDOW) model(D) y(ln_open_age)   x(ln_issues_new ln_contributors) sample(s_D36) expn(29893) expg(834)
+(note: file results/r6c/r6c_R6_4_D_36M.ster not found)
+file results/r6c/r6c_R6_4_D_36M.ster saved
+
+. 
+. file close r6cfh
+
+. log close r6c
+      name:  r6c
+       log:  D:\PaperPublish\StataData\ObjectiveMeasure\results/r6c/r6c_stata_robustness.log
+  log type:  text
+ closed on:   7 Sep 2026, 13:05:17
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
