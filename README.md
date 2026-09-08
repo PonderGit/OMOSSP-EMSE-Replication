@@ -1,6 +1,6 @@
 # OMOSSP-EMSE-Replication
 
-**Pre-release replication package** for the manuscript:
+**Replication package** for the manuscript:
 
 > **What Does Closed-Issue Resolution Time Measure? Evidence from Open-Source Software Projects**
 
@@ -179,6 +179,8 @@ Current manuscript authors:
 
 Gu Xiaopeng ORCID: https://orcid.org/0009-0004-5735-0535
 
-## Pre-release status
+## Release status
 
-This repository is under controlled release construction. A release tag and permanent identifier will be frozen only after the exact-tree privacy/secret/license audit and R5-I release freeze.
+Formal replication release: **v1.0.0**.
+
+The exact public tree passed the R5-H privacy / secret / license audit before release. The v1.0.0 GitHub release is intended for Zenodo archival; for reproducible citation, use the version-specific DOI shown on the corresponding Zenodo record once archival is complete.
