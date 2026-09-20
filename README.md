@@ -175,7 +175,7 @@ Current manuscript authors:
 1. Gu Xiaopeng
 2. Ma Meizi
 3. Gao Yang
-4. Alfiya Yuryevna Abinova
+4. Gulzhakan Mynzhanova
 
 Gu Xiaopeng ORCID: https://orcid.org/0009-0004-5735-0535
 
