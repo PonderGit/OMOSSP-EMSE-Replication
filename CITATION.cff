@@ -13,9 +13,9 @@ authors:
   - family-names: "Gao"
     given-names: "Yang"
     affiliation: "Al-Farabi Kazakh National University, Almaty, Republic of Kazakhstan"
-  - family-names: "Abinova"
-    given-names: "Alfiya Yuryevna"
-    affiliation: "Al-Farabi Kazakh National University, Almaty, Republic of Kazakhstan"
+  - family-names: "Mynzhanova"
+    given-names: "Gulzhakan"
+    affiliation: "Kazakh Ablai Khan University of International Relations and World Languages, Almaty, Republic of Kazakhstan"
 repository-code: "https://github.com/PonderGit/OMOSSP-EMSE-Replication"
 keywords:
   - "software measurement"
